@@ -1,11 +1,24 @@
 import socket
 import threading
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 import sys
 
 app = Flask(__name__)
+CORS(app)
 
+def parse_address(address):
+        parts = address.split(":")
+        if len(parts) != 2:
+            raise ValueError("Invalid address format. Use IP:Porta.")
+        ip = parts[0]
+        port = int(parts[1])
+        return ip, port
+
+
+ip = socket.gethostbyname(socket.gethostname())
+port = 9001
 token_holder = False
 servers = [{'address': 'http://app1:9021', 'token_holder': False},
            {'address': 'http://app2:9022', 'token_holder': False},
@@ -53,6 +66,8 @@ def handle_message(message):
         send_message(tuple(sender_address.split(':')), 'STATUS_RESPONSE', status)
 
 def start_server():
+    global ip
+    global port
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         server_socket.bind(('0.0.0.0', 9001))
         server_socket.listen()
@@ -78,8 +93,9 @@ def check_server_status():
     active_servers = []
     
     for server in servers:
-        if server['address'] != 'http://app1:9021':
-            if check_server_alive(tuple(server['address'].split(':'))):
+        if server['address'] != 'http://app1:9001':
+            ip, port = parse_address(server['address'])
+            if check_server_alive((ip, port-20)):
                 active_servers.append(server)
             else:
                 print(f"{server['address']} está fora e será removido.")
